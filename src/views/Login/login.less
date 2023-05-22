@@ -1,0 +1,35 @@
+.loginbox{
+    // 控制表单元素
+    .ant-input, .ant-input-password{
+        background-color: rgba(255,255,255,0);
+        border-color: #1890ff;
+        color: #fff;
+        height: 38px;
+        // 控制placeholder文字样式
+        &::placeholder {
+            color: #fff !important;
+        }
+    }
+    // 控制眼睛图标
+    .anticon.anticon-eye-invisible.ant-input-password-icon {
+        color: #1890ff;
+    }
+    // 单独控制密码高度
+    .ant-input-password {
+        .ant-input {
+            height: 28px;
+        }
+    }
+    // 控制验证码盒子
+    .captchaBox {
+        display: flex;
+        .captchaImg {
+            margin-left: 20px;
+            cursor: pointer;
+        }
+    }
+    // 控制登录按钮
+    .loginBtn {
+        height: 38px;
+    }
+}

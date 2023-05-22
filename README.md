@@ -382,3 +382,291 @@ const App: React.FC = () => {
 
 export default App;
 ```
+
+
+# 嵌套路由
+router/index.tsx
+```tsx
+const routes = [
+    {
+        path: "/",
+        element: <Navigate to="/page1"/>,
+    },
+    {
+        path: "/",
+        element: <Home />,
+        children: [
+            {
+                path: '/page1',
+                element: withLoadingComponent(<Page1 />)
+            },
+            {
+                path: '/page2',
+                element: withLoadingComponent(<Page2 />)
+            },
+        ]
+    },
+    {
+        path: '/about',
+        element: withLoadingComponent(<About />)
+    }
+]
+```
+Home.tsx:
+```tsx
+  {/* 右边内容 */}
+  <Content style={{ margin: '16px 16px 0', padding: 24, minHeight: 360, background: colorBgContainer }}>
+      {/* 窗口部分 */}
+      <Outlet></Outlet>
+  </Content>
+```
+
+# 主菜单组件的抽取以及侧边栏的收缩与展开
+对于Menu组件的操作也许会很多，为了方便组件化和页面整洁，可以将Menu单独提取出来封装成组件，以免全部写在Home页面里
+Components/MainMenu/index.tsx:
+```tsx
+import React, { useState } from 'react';
+import {
+    DesktopOutlined,
+    FileOutlined,
+    PieChartOutlined,
+    TeamOutlined,
+    UserOutlined,
+  } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import { Menu } from 'antd';
+import { useNavigate } from 'react-router-dom';
+
+type MenuItem = Required<MenuProps>['items'][number];
+
+function getItem(
+  label: React.ReactNode,
+  key: React.Key,
+  icon?: React.ReactNode,
+  children?: MenuItem[],
+): MenuItem {
+  return {
+    key,
+    icon,
+    children,
+    label,
+  } as MenuItem;
+}
+
+const items: MenuItem[] = [
+  getItem('Option 1', '/page1', <PieChartOutlined />),
+  getItem('Option 2', '/page2', <DesktopOutlined />),
+  getItem('User', '/sub1', <UserOutlined />, [
+    getItem('Tom', '/3'),
+    getItem('Bill', '4'),
+    getItem('Alex', '5'),
+  ]),
+  getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
+  getItem('Files', '9', <FileOutlined />),
+];
+
+const Comp: React.FC = () => {
+    const navigateTo = useNavigate()
+
+  const [openKeys, setOpenKeys] = useState(['']);
+  const handleOpenChange = (keys:string[]) => { // keys是一个数组，记录了当前哪一项是展开的（用key记录）
+    // 展开和回收某项菜单时，执行
+    // setOpenKeys为设置展开项，只传入keys数组的最后一项，即表示默认只展开最近点击的一项
+    setOpenKeys([keys[keys.length-1]])
+  }
+
+  const menuClick = (e:{key:string}) => {
+    console.log(e.key);
+    navigateTo(e.key)
+  }
+
+  return (
+    <Menu 
+        theme="dark" 
+        defaultSelectedKeys={['/page1']} 
+        mode="inline" 
+        items={items} 
+        onClick={menuClick} 
+        onOpenChange={handleOpenChange}
+        // 当前菜单展开项的key数组
+        openKeys={openKeys}
+    />
+  )
+}
+
+export default Comp
+```
+Home.tsx中删除所有关于Menu的代码，引入组件即可  
+import MainMenu from '@/components/MainMenu';
+
+# 菜单数据的整理
+原写法：
+```tsx
+function getItem(
+  label: React.ReactNode,
+  key: React.Key,
+  icon?: React.ReactNode,
+  children?: MenuItem[],
+): MenuItem {
+  return {
+    key,
+    icon,
+    children,
+    label,
+  } as MenuItem;
+}
+const items: MenuItem[] = [
+  getItem('Option 1', '/page1', <PieChartOutlined />),
+  getItem('Option 2', '/page2', <DesktopOutlined />),
+  getItem('User', '/sub1', <UserOutlined />, [
+    getItem('Tom', '/3'),
+    getItem('Bill', '4'),
+    getItem('Alex', '5'),
+  ]),
+  getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
+  getItem('Files', '9', <FileOutlined />),
+];
+```
+
+等价于：
+```tsx
+const items: MenuItem[] = [
+  {
+    label: '栏目1',
+    key: '/page1',
+    icon: <PieChartOutlined />
+  },
+  {
+    label: '栏目2',
+    key: '/page2',
+    icon: <DesktopOutlined />
+  },
+  {
+    label: '栏目3',
+    key: 'page3',
+    icon: <UserOutlined />,
+    children: [
+      {
+        label: '栏目3-1',
+        key: '/page3/1',
+      },
+      {
+        label: '栏目3-2',
+        key: '/page3/2',
+      },
+      {
+        label: '栏目3-3',
+        key: '/page3/3',
+      },
+    ]
+  },
+  {
+    label: '栏目4',
+    key: 'page4',
+    icon: <TeamOutlined />,
+    children: [
+      {
+        label: '栏目4-1',
+        key: '/page4/1',
+      },
+      {
+        label: '栏目4-2',
+        key: '/page4/2',
+      },
+    ]
+  },
+  {
+    label: '栏目5',
+    key: '/page5',
+    icon: <FileOutlined />
+  },
+]
+```
+
+上面的封装写法更简洁，但下面的等价写法看上去更直观一些。
+因为后续会根据登录的账号不同，也许会有权限模块，各账号所能展现得模块不一样。 下面的写法更便于后续item匹配  
+
+# 其余路由配置
+```tsx
+const routes = [
+    {
+        path: "/",
+        element: <Navigate to="/page1"/>,
+    },
+    {
+        path: "/",
+        element: <Home />,
+        children: [
+            {
+                path: '/page1',
+                element: withLoadingComponent(<Page1 />)
+            },
+            {
+                path: '/page2',
+                element: withLoadingComponent(<Page2 />)
+            },
+            {
+                path: '/page3/1',
+                element: withLoadingComponent(<Page301 />)
+            },
+            {
+                path: '/page3/2',
+                element: withLoadingComponent(<Page302 />)
+            },
+            {
+                path: '/page3/3',
+                element: withLoadingComponent(<Page303 />)
+            },
+        ]
+    },
+    // 当用户输入的url地址并不能匹配时，重定向到首页
+    {
+        path: "*",
+        element: <Navigate to="/page1"/>
+    }
+]
+```
+当路径不匹配或用户手动输入非法路径时，可以用 * 进行匹配，跳转到首页
+
+# 刷新时默认当前选中样式
+目前菜单栏还有些bug，比如 选择栏目2，会有选中样式，但是一刷新，样式又变回默认的选中项了。  
+但是通过观察，url路径依旧是page2的，所以可以通过url路径来解决这一bug
+```tsx
+<Menu 
+  theme="dark" 
+  // defaultSelectedKeys 表示当前样式所在的选中的key
+  defaultSelectedKeys={[currentRoute.pathname]} 
+  mode="inline" 
+  // 菜单项的数据
+  items={items} 
+  onClick={menuClick}  
+  onOpenChange={handleOpenChange}
+  // 当前菜单展开项的key数组
+  openKeys={openKeys}
+/>
+```
+并且如果选择子选项，刷新后 应该该父选项仍保持展开
+```tsx
+const Comp: React.FC = () => {
+  const navigateTo = useNavigate()
+  const currentRoute = useLocation();
+
+  let firstOpenKey: string = ""
+
+  function findKey(obj){
+    return obj.key === currentRoute.pathname
+
+  }
+  for(let i = 0;i<items.length;i++){
+    if( items[i]['children'] && items[i]['children'].length > 0 && items[i]['children'].find(findKey) ){ // 找到
+      firstOpenKey = items[i].key;
+      break;
+    }
+  }
+
+  const [openKeys, setOpenKeys] = useState([firstOpenKey]);
+
+  ...
+
+}
+```

@@ -1,6 +1,6 @@
 import App from "../App"
 import Home from "../views/Home"
-import About from "../views/About"
+import About from "../views/Page301"
 import React from 'react'
 import {BrowserRouter,Routes,Route,Navigate} from "react-router-dom"
 
