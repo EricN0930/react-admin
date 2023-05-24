@@ -670,3 +670,808 @@ const Comp: React.FC = () => {
 
 }
 ```
+
+# 验证码布局和登录页样式
+Login/index.tsx:
+```tsx
+<div className='captchaBox'>
+  <Input placeholder="验证码" className='ipt'/>
+  <div className="captchaImg">
+    <img src="xxx" height="38" alt="" />
+  </div>
+</div>
+```
+
+Login/Login.less:
+```less
+.loginbox{
+    // 控制表单元素
+    .ant-input, .ant-input-password{
+        background-color: rgba(255,255,255,0);
+        border-color: #1890ff;
+        color: #fff;
+        height: 38px;
+        // 控制placeholder文字样式
+        &::placeholder {
+            // color: #1890ff !important;
+            color: rgba(24,144,255,.8) !important;
+        }
+    }
+    // 控制眼睛图标
+    .anticon.anticon-eye-invisible.ant-input-password-icon {
+        color: #1890ff;
+    }
+    // 单独控制密码高度
+    .ant-input-password {
+        .ant-input {
+            height: 28px;
+        }
+    }
+    // 控制验证码盒子
+    .captchaBox {
+        display: flex;
+        .captchaImg {
+            margin-left: 20px;
+            cursor: pointer;
+        }
+    }
+    // 控制登录按钮
+    .loginBtn {
+        height: 38px;
+    }
+}
+```
+
+# 获取用户所输入的登录信息
+Login/index.tsx:
+```tsx
+import React,{ChangeEvent,useEffect,useState} from 'react';
+
+  // 获取用户输入的信息
+  const [usernameVal,setUsernameVal] = useState(""); // 定义用户输入用户名 变量
+  const [passwordVal,setPasswordVal] = useState(""); // 定义用户输入密码 变量
+  const [captchaVal,setCaptchaVal] = useState(""); // 定义用户输入验证码 变量
+  const usernameChange = (e:ChangeEvent<HTMLInputElement>) => {
+      setUsernameVal(e.target.value)
+  }
+  const passwordChange = (e:ChangeEvent<HTMLInputElement>) => {
+      setPasswordVal(e.target.value)
+  }
+  const captchaChange = (e:ChangeEvent<HTMLInputElement>) => {
+      setCaptchaVal(e.target.value)
+  }
+
+  // 点击登录按钮回调
+  const goToLogin = () => {
+      console.log(usernameVal,passwordVal,captchaVal);
+  }
+
+  {/* form */}
+  <div className='form'>
+      <Space direction="vertical" size="large" style={{ display: 'flex' }}>
+          <Input placeholder="用户名" onChange={usernameChange}/>
+          <Input.Password placeholder="密码" onChange={passwordChange}/>
+          <div className="captchaBox">
+              <Input placeholder="验证码" onChange={captchaChange}/>
+              <div className="captchaImg">
+                  <img src="" alt="code.png" height='38'/>
+              </div>
+          </div>
+          <Button type="primary" block className="loginBtn" onClick={goToLogin}>登录</Button>
+      </Space>
+  </div>
+```
+
+# ReactRedux的基本配置
+首先，确保浏览器有redux dev tools开发者工具，zip包放在了src/tools/reduxdevtools.zip  
+拖动到浏览器的扩展程序即可  
+
+安装 Redux 和 ReactRedux ：
+```
+npm i redux react-redux --save
+```
+
+/src下新建store，新建index.ts文件
+```ts
+import {legacy_createStore } from "redux"
+import reducer from './reducer.ts'
+
+// window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+// 让浏览器redux-dev-tools能正常使用
+const store = legacy_createStore(reducer,window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__());
+
+export default store;
+```
+
+/src/store下新建reducer.ts文件：
+```ts
+const defaultState = {
+    num: 20
+}
+
+let reducer = (state = defaultState) => {
+    let newState = JSON.parse(JSON.stringify(state))
+
+    return newState
+}
+
+export default reducer
+```
+
+main.tsx中全局引入:
+```tsx
+// 状态管理
+import {Provider} from "react-redux"
+import store from '@/store/index.ts'
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <Provider store={store}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </Provider>
+)
+```
+
+组件中若要使用redux，如Page1.tsx:
+```tsx
+import React from "react"
+import { useSelector , useDispatch } from "react-redux"
+
+const Page1 = () => {
+    // 通过useSelector获取仓库数据
+    const {num} = useSelector((state) => (
+        {
+            num: state.num
+        }
+    ))
+    
+    // 通过useDispatch修改仓库数据
+    const dispatch = useDispatch() 
+    const changeNum = () => {
+        // dispatch({type:"字符串（认为是一个记号）",value: 3})   type是固定的，value字段是自定义的
+        dispatch({type:"add1"})
+        // dispatch({type:"add2",value:10})
+    }
+
+    return (
+        <>
+        <div className='page1'>
+            <p>This is the content of Page1</p>
+            <p>{num}</p>
+            <button onClick={changeNum}>按钮</button>
+        </div>
+        </>
+    )
+}
+
+export default Page1
+```
+对应上面的操作，reducer中写修改数据的代码
+reducer.ts:
+```ts
+
+const defaultState = {
+    num: 20
+}
+
+let reducer = (state = defaultState, action:{type:string, value:number}) => {
+    // 调用dispatch执行这里代码
+
+    let newState = JSON.parse(JSON.stringify(state))
+
+    switch(action.type){
+        case "add1":
+            newState.num++
+            break;
+        case "add2":
+            newState.num += action.value
+            break;
+        default: 
+            break;
+    }
+
+    return newState
+}
+
+export default reducer
+```
+
+# 解决两个下划线警告问题
+首先，在我们组建页，想要获取store数据时，store上的数据经常会出现下划线，提示找不到  
+这时候可以用ts给的ReturnType，获取函数类型返回值类型  
+且考虑到可能每个模块都要用到这个类型，可以放到全局声明文件中去  
+在src下新建types文件夹，新建 store.d.ts：
+```ts
+// 【重点】d.ts 文件仅在没有任何导入时才被视为环境模块声明.如果您提供了一个导入行，它现在被视为
+// 一个普通的模块文件，而不是全局文件！！！
+
+// 【重点】类型声明不要直接使用引入 import...from...   而是 使用 import("@/...")这种语法
+
+// TS中提供了ReturnType，用来获取函数类型的返回值类型
+type RootState = ReturnType<typeof import('@/store/index.ts').getState>;
+
+interface Window{
+    __REDUX_DEVTOOLS_EXTENSION__: function;
+}
+```
+
+其次，为了让浏览器可以正常使用redux devtools，在store/index.ts中引入了一些配置,也有下划线报错  
+继续在store.d.ts文件中添加， 代码如上面代码块所示，添加Window接口
+
+# 对于reducer中的数据和方法进行抽取
+上面我们所有的数据和方法全部写在了reducer里面，不论什么模块都放在里面写，很容易混乱。所有需要按照模块对它们进行抽取  
+src/store新建NumStatus文件夹，新建index.ts
+```ts
+export default {
+  state: {
+      num:20
+  },
+  actions: {
+      add1(newState:{num:number}){
+          newState.num++;
+      },
+      add2(newState:{num:number},action:{type:string,value:number}){
+          console.log('action',action);
+          
+          newState.num += action.value;
+      }
+  },
+  // 名字统一管理
+  add1: "add1",
+  add2: "add2",
+}
+```
+
+src/store/reducer.ts:
+```ts
+import handleNum from "./NumStatus/index.ts"
+
+const defaultState = {
+    // num: handleNum.state.num  
+    ...handleNum.state  // 解构写法
+}
+
+let reducer = (state = defaultState, action:{type:string, value:number}) => {
+    // 调用dispatch执行这里代码
+
+    let newState = JSON.parse(JSON.stringify(state))
+
+    switch(action.type){
+        case handleNum.add1:  // 名字统一管理后就不用写出 "add1" 了，这样可以避免变量名重复，且结构更清晰
+            handleNum.actions.add1(newState,action)
+            break;
+        case handleNum.add2:
+            handleNum.actions.add2(newState,action)
+            break;
+        default: 
+            break;
+    }
+
+    return newState
+}
+
+export default reducer
+```
+
+
+# ReactRedux的模块化 【重点】
+对于上面的模块化依旧不够彻底，因为如果模块多了，reducer.ts也会变得很长，所有模块都要在reducer.ts中过一遍  
+如何优化reducer，也模块化到各个功能模块中？  —————— 利用 combineReducers
+
+src/store/index.ts
+```ts
+import {legacy_createStore,combineReducers } from "redux"
+
+import handleNum from "./NumStatus/reducer.ts"
+import handleNum1 from "./NumStatus1/reducer.ts"
+
+// 组合各个模块的reducer
+const reducers = combineReducers({
+    handleNum,
+    handleNum1
+})
+
+// window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+// 让浏览器redux-dev-tools能正常使用
+const store = legacy_createStore(reducers,window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__());
+
+export default store; 
+```
+
+src/store/NumStatus中新建reducer.ts
+```ts
+import handleNum from "./index.ts"
+
+const defaultState = {
+    ...handleNum.state
+}
+
+let reducer = (state = defaultState, action:{type:string, value:number}) => {
+    let newState = JSON.parse(JSON.stringify(state))
+
+    switch(action.type){
+        case handleNum.add1:  // 名字统一管理后就不用写出 "add1" 了，这样可以避免变量名重复，且结构更清晰
+            handleNum.actions.add1(newState,action)
+            break;
+        case handleNum.add2:
+            handleNum.actions.add2(newState,action)
+            break;
+        default: 
+            break;
+    }
+
+    return newState
+}
+
+export default reducer
+```
+
+src/store/NumStatus/index.ts
+```ts
+export default {
+    state: {
+        num:20
+    },
+    actions: {
+        add1(newState:{num:number}){
+            newState.num++;
+        },
+        add2(newState:{num:number},action:{type:string,value:number}){
+            console.log('action',action);
+            
+            newState.num += action.value;
+        }
+    },
+    // 名字统一管理
+    add1: "add1",
+    add2: "add2",
+}
+```
+
+NumStatus1的内容一致，不同之处为NumStatus1的按钮每点击一次增加100，初始化为100
+
+Page1.tsx:
+```tsx
+import React from "react"
+import { useSelector , useDispatch } from "react-redux"
+// import store from "@/store/index.ts"
+
+const Page1 = () => {
+    // 通过useDispatch修改仓库数据
+    const dispatch = useDispatch() 
+    
+    // 通过useSelector获取仓库数据
+    const {num} = useSelector((state:RootState) => (
+        {
+            num: state.handleNum.num
+        }
+    ))
+    
+    const {num1} = useSelector((state:RootState) => (
+        {
+            num1: state.handleNum1.num
+        }
+    ))
+    const changeNum = () => {
+        // dispatch({type:"字符串（认为是一个记号）",value: 3})   type是固定的，value字段是自定义的
+        // dispatch({type:"add1"})
+        dispatch({type:"add2",value:10})
+    }
+
+    const changeNum1 = () => {
+        dispatch({type:"add",value:100})
+    }
+    return (
+        <>
+        <div className='page1'>
+            <p>This is the content of Page1</p>
+            <p>{num}</p>
+            <button onClick={changeNum}>Num按钮，每次加10</button>
+            <p>{num1}</p>
+            <button onClick={changeNum1}>Num1按钮，每次加100</button>
+        </div>
+        </>
+    )
+}
+
+export default Page1
+```
+
+# ReactRedux代码优化
+在上面的写法中，我们每对一个模块进行添加、修改等操作，都需要在模块的index文件里编写action，然后在模块的reducer里面写操作  
+所以 优化目标： 以后每添加一个方法，只需要在模块的index文件里修改，reducer文件就不再更改  
+将index里面名字统一管理采用对象的形式，reducer文件里不再采用switch case语法，而是用for循环遍历  
+index.ts:
+```ts
+    // 名字统一管理
+    // add1: "add1",
+    // add2: "add2",
+    actionNames: {
+        add1: "add1",
+        add2: "add2",
+    }
+```
+reducer.ts:
+```ts
+import handleNum from "./index.ts"
+
+const defaultState = {
+    ...handleNum.state
+}
+
+let reducer = (state = defaultState, action:{type:string, value:number}) => {
+    let newState = JSON.parse(JSON.stringify(state))
+
+    // 优化思路： switch的做法即 拿着action.type 和 case后面每一个进行对比。 与遍历相似
+    // 优化即可将case后面的项做成对象 actionNames
+    // switch(action.type){
+    //     case handleNum.add1: 
+    //         // handleNum.actions.add1(newState,action)
+    //         handleNum.actions[handleNum.add1](newState,action)
+    //         break;
+    //     case handleNum.add2:
+    //         handleNum.actions[handleNum.add2](newState,action)
+    //         break;
+    //     default: 
+    //         break;
+    // }
+
+
+    // 【优化】这样写就可以 每次写一个方法，就不需要在该reducer文件里做修改
+    for(let key in handleNum.actionNames){
+        if(action.type === handleNum.actionNames[key]){
+            handleNum.actions[handleNum.actionNames[key]](newState,action)
+        }
+    }
+    return newState
+}
+
+export default reducer
+```
+
+## 优化2：方法名对象自动生成
+对于上述的优化，还不是彻底，如果每添加一个方法，不需要在方法名对象上添加，而是自动生成就更方便了 
+src/store/NumStatus/index.ts 
+```ts
+    // 名字统一管理
+    // add1: "add1",
+    // add2: "add2",
+    actionNames: {}
+}
+
+let actionNames = {}
+for(let key in store.actions){
+    actionNames[key] = key
+}
+store.actionNames = actionNames
+export default store
+
+```
+
+# react-redux的异步解决方案 redux-thunk
+如果在NumStatus/index.ts中做异步操作，目前是无效的。所以需要异步方案来解决 （可以使用redux-saga 或 redux-thunk）  
+这里使用redux-thunk，因为体积更小，更灵活，学习成本较低。 但需要手动抽取和封装  
+安装：
+```
+npm i redux-thunk
+```
+store/NumStatus/index.ts文件加入AsyncActions对象用于存放异步
+```ts
+const store = {
+    state: {
+        num:20
+    },
+    actions: {
+        add1(newState:{num:number}){
+            newState.num++;
+        },
+        add2(newState:{num:number},action:{type:string,value:number}){
+            newState.num += action.value;
+        }
+    },
+    // 优化redux-thunk的异步写法（模仿Vuex的写法）
+    asyncActions:{  // 只放异步方法
+        asyncAdd1(dispatch:Function){  // dis 其实就是 同步的dispatch，为了避免混淆
+            setTimeout(()=>{
+                dispatch({type:"add1"})
+            },1000)
+        }
+    },
+    // 名字统一管理
+    // add1: "add1",
+    // add2: "add2",
+    actionNames: {}
+}
+```
+
+Page1.tsx:
+```tsx
+import numStatus from '@/store/NumStatus/index.ts'
+
+const changeNumAsync = () => {
+  // 同步的写法
+  // dispatch({type:"add1",value:10})
+  // 异步的写法 redux-thunk的用法  格式 ： dispatch(异步执行函数)
+  // dispatch((dis:Function)=>{  // dis 其实就是 同步的dispatch，为了避免混淆
+  //     setTimeout(()=>{
+  //         dis({type:"add1",value:10})
+  //     })
+  // })
+  dispatch(numStatus.asyncActions.asyncAdd1)
+}
+```
+
+# React-redux 总结使用
+对于新模块Xxx的redux使用  
+src/store下新建XxxStatus文件夹，新建index.ts reducer.ts
+src/store/XxxStatus/index.ts :
+```ts
+const store = {
+    state: {
+        // 放数据
+    },
+    actions: {
+        // 放同步方法
+    },
+    asyncActions:{ 
+        // 放异步方法
+    },
+    actionNames: {}
+}
+
+let actionNames = {}
+for(let key in store.actions){
+    actionNames[key] = key
+}
+store.actionNames = actionNames
+export default store
+
+```
+
+src/store/XxxStatus/reducer.ts :
+```ts
+import XxxStatus from "./index.ts"
+
+const defaultState = {
+    ...XxxStatus.state
+}
+
+let reducer = (state = defaultState, action:{type:string, value:number}) => {
+    let newState = JSON.parse(JSON.stringify(state))
+
+    for(let key in XxxStatus.actionNames){
+        if(action.type === XxxStatus.actionNames[key]){
+            XxxStatus.actions[XxxStatus.actionNames[key]](newState,action)
+        }
+    }
+    return newState
+}
+
+export default reducer
+```
+
+对于组件中获取该模块的数据
+Page.tsx:
+```tsx
+import React from "react"
+import { useSelector , useDispatch } from "react-redux"
+import XxxStatus from '@/store/XxxStatus/index.ts'
+
+// 通过useDispatch修改仓库数据
+const dispatch = useDispatch() 
+    
+// 通过useSelector获取仓库数据
+const {param1,param2} = useSelector((state:RootState) => (
+    {
+        param1: state.XxxStatus.param1,
+        param2: state.Xxx2Status.param2,
+    }
+))
+
+const changeNum = () => { // 同步
+    dispatch({type:"Xxx",value:10})
+}
+const changeNumAsync = () => {  // 异步
+    dispatch(XxxStatus.asyncActions.xxxFn)
+}
+```
+
+# 数据交互的解决方案
+## axios封装和api的抽取
+安装axios
+```
+npm i axios
+```
+
+src下新建api文件夹，新建index.ts
+```ts
+import axios from "axios"
+
+// 创建axios实例
+const instance = axios.create({
+    // 基本请求路径的抽取
+    baseURL:"http://xue.cnkdl.cn:23683",
+    // 这个时间是你每次请求的过期时间，这次请求认为20秒之后这个请求就是失败的
+    timeout:20000
+})
+// 请求拦截器
+instance.interceptors.request.use(config=>{
+
+    return config
+},err=>{
+    return Promise.reject(err)
+});
+// 响应拦截器
+instance.interceptors.response.use(res=>{
+    return res.data
+
+},err=>{
+    return Promise.reject(err)
+})
+
+export default instance
+```
+
+src/api下新建request.ts
+```ts
+// 统一管理项目中所有的请求路径 api
+import request from "./index"
+
+// 验证码请求
+export const CaptchaAPI = () => request.get("/prod-api/captchaImage");
+```
+
+Login.tsx:
+```tsx
+import { CaptchaAPI } from "@/api/request"
+
+// 验证码请求
+  const getCaptcha = async () => {
+      let captchaAPIRes:CaptchaAPIRes = await CaptchaAPI();
+      console.log("captchaAPIRes",captchaAPIRes);
+      
+  }
+```
+
+由于采用TS，所以需要给api的响应数据添加类型，在src/types文件夹下新建 api.d.ts 用于定义请求参数的类型 和 响应的类型  
+```ts
+interface CaptchaAPIRes {
+  msg: string;
+  img: string;
+  code: number;
+  captchaEnabled: boolean;
+  uuid: string;
+}
+```
+可以根据接口文档定义响应类型，也可以根据api返回的数据使用插件生成。安装 JSON to TS 插件
+这里是先定义接口，并调用接口返回数据，复制控制台打印的响应数据（右键 Copy object），然后粘贴到api.d.ts中，选中后使用插件(shift + alt + ctrl + v)即可将选中的JSON数据全部转换成ts类型  
+
+api/request.ts:
+```ts
+// 验证码请求
+export const CaptchaAPI = ():Promise<CaptchaAPIRes> => request.get("/prod-api/captchaImage");
+```
+可以在request.ts文件中定义响应类型 :Promise<CaptchaAPIRes>, 这样定义后，在Login/index.tsx中就不需要再定义了
+
+# 完成验证码业务
+发送获取验证码请求，根据返回的img字段，拼接成字符串给img的src，并设置加载组件时调用
+src/views/Login/index.tsx：
+```tsx
+const login = () => {
+  // 加载完这个组件之后,加载背景
+  useEffect(() => {
+      initLoginBg();
+      window.onresize = function(){ initLoginBg() }
+      console.log('123123');
+      
+      // 获取验证码
+      getCaptcha()
+  },[])
+
+  // 验证码请求
+  const getCaptcha = async () => {
+    let captchaAPIRes:CaptchaAPIRes = await CaptchaAPI();
+    // console.log("captchaAPIRes",captchaAPIRes);
+    if(captchaAPIRes.code === 200){
+        // 把图片数据显示在img上
+        setCaptchaImg("data:image/gif;base64," + captchaAPIRes.img)
+        // 本地保存uuid，给登录接口使用
+        localStorage.setItem("uuid",captchaAPIRes.uuid)
+    }
+  }
+
+  return (
+    <div className={styles.loginPage}>
+        {/* 存放背景 */}
+        <canvas id='canvas' style={{display:"block"}}></canvas>
+        {/* 登录盒子 */}
+        <div className={styles.loginBox}>
+            <div className='loginbox'>
+                {/* 标题 */}
+                <div className={styles.title}>
+                    <h1>前端Eric&nbsp;·&nbsp;通用后台系统</h1>
+                    <p>Strive Everyday</p>
+                </div>
+                {/* form */}
+                <div className='form'>
+                    <Space direction="vertical" size="large" style={{ display: 'flex' }}>
+                        <Input placeholder="用户名" onChange={usernameChange}/>
+                        <Input.Password placeholder="密码" onChange={passwordChange}/>
+                        <div className="captchaBox" onClick={getCaptcha}>
+                            <Input placeholder="验证码" onChange={captchaChange}/>
+                            <div className="captchaImg">
+                                <img src={captchaImg} alt="code.png" height='38'/>
+                            </div>
+                        </div>
+                        <Button type="primary" block className="loginBtn" onClick={goToLogin}>登录</Button>
+                    </Space>
+                </div>
+            </div>
+        </div>
+    </div>
+  )
+}
+```
+
+# 登录业务完成
+定义登录接口的请求和响应类型
+src/types/api.d.ts:
+```ts
+// 登录的请求类型
+interface LoginAPIReq {
+  username: string;
+  password: string;
+  code: string;
+  uuid: string;
+}
+
+// 登录的响应类型
+interface LoginAPIRes {
+  msg: string;
+  code: number;
+  token: string;
+}
+```
+
+定义登录请求api 
+src/api/request.ts
+```ts
+// 登录请求
+export const LoginAPI = (params:LoginAPIReq):Promise<LoginAPIRes> => request.post("/prod-api/login",params);
+```
+
+Login/index.tsx
+```tsx
+import {useNavigate} from "react-router-dom"
+
+let navigateTo = useNavigate();
+
+// 点击登录按钮回调
+const goToLogin = async () => {
+  // 验证是否有空值
+  if(!usernameVal.trim() || !passwordVal.trim() || !captchaVal.trim()){
+    message.warning("请输入完整信息！")
+    return
+  }
+  // 发起登录请求
+  let LoginAPIRes = await LoginAPI({
+    username: usernameVal,
+    password: passwordVal,
+    code: captchaVal,
+    uuid: localStorage.getItem("uuid")
+  })
+  // console.log(LoginAPIRes);  // 登录测试账号 qdtest1 密码：123456
+  if(LoginAPIRes.code === 200){
+    // 提示登录成功
+    message.success("登录成功")
+    // 保存token
+    localStorage.setItem("admin_token",LoginAPIRes.token)
+    // 跳转到首页(/page1)
+    navigateTo("/page1")
+    // 删除本地uuid
+    localStorage.removeItem("uuid")
+  }
+}
+
+```
